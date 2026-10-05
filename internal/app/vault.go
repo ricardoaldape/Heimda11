@@ -87,8 +87,11 @@ func (s *Service) RedeemLease(leaseID, agentID string) (string,error) {
 	return value,nil
 }
 
-func (s *Service) secretValue(secretID string) (string,error) {
+func (s *Service) secretValueForAgent(secretID, agentID string) (string,error) {
 	record,err:=s.store.Secret(secretID)
 	if err != nil{return "",err}
+	if record.ScopeAgentID!="" && record.ScopeAgentID!=agentID {
+		return "", errors.New("secret is scoped to a different agent")
+	}
 	return s.cipher.Decrypt(record.Ciphertext)
 }
