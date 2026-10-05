@@ -346,7 +346,7 @@ func (s *Service) Dashboard() core.Dashboard {
 	d.SecretsTotal = len(s.store.Secrets())
 	d.MemoryItems = len(s.store.MemoryItems())
 	for _, run := range s.store.FlowRuns() {
-		if run.Status == "running" || run.Status == "waiting_approval" { d.FlowsRunning++ }
+		if run.Status == "running" || run.Status == "needs_gate" || run.Status == "waiting_approval" { d.FlowsRunning++ }
 	}
 	return d
 }
