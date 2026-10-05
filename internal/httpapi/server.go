@@ -138,237 +138,401 @@ func securityHeaders(next http.Handler) http.Handler {
 }
 
 func (a *API) health(w http.ResponseWriter, _ *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]any{"status":"ok","version":app.Version})
+	writeJSON(w, http.StatusOK, map[string]any{"status": "ok", "version": app.Version})
 }
 
-func (a *API) meta(w http.ResponseWriter, _ *http.Request) { writeJSON(w,http.StatusOK,a.service.Meta()) }
+func (a *API) meta(w http.ResponseWriter, _ *http.Request) {
+	writeJSON(w, http.StatusOK, a.service.Meta())
+}
 
 func (a *API) ui(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/" { http.NotFound(w,r); return }
-	w.Header().Set("Content-Type","text/html; charset=utf-8")
-	_,_ = w.Write(webui.Index)
+	if r.URL.Path != "/" {
+		http.NotFound(w, r)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_, _ = w.Write(webui.Index)
 }
-func (a *API) appJS(w http.ResponseWriter,_ *http.Request){w.Header().Set("Content-Type","text/javascript; charset=utf-8");_,_=w.Write(webui.AppJS)}
-func (a *API) styles(w http.ResponseWriter,_ *http.Request){w.Header().Set("Content-Type","text/css; charset=utf-8");_,_=w.Write(webui.Styles)}
+func (a *API) appJS(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "text/javascript; charset=utf-8")
+	_, _ = w.Write(webui.AppJS)
+}
+func (a *API) styles(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "text/css; charset=utf-8")
+	_, _ = w.Write(webui.Styles)
+}
 
-func (a *API) dashboard(w http.ResponseWriter,_ *http.Request){writeJSON(w,http.StatusOK,a.service.Dashboard())}
-func (a *API) headcount(w http.ResponseWriter,_ *http.Request){writeJSON(w,http.StatusOK,a.service.WorkforceHeadcount())}
-func (a *API) export(w http.ResponseWriter,_ *http.Request){w.Header().Set("Content-Disposition","attachment; filename=heimda11-export.json");writeJSON(w,http.StatusOK,a.service.Export())}
+func (a *API) dashboard(w http.ResponseWriter, _ *http.Request) {
+	writeJSON(w, http.StatusOK, a.service.Dashboard())
+}
+func (a *API) headcount(w http.ResponseWriter, _ *http.Request) {
+	writeJSON(w, http.StatusOK, a.service.WorkforceHeadcount())
+}
+func (a *API) export(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Disposition", "attachment; filename=heimda11-export.json")
+	writeJSON(w, http.StatusOK, a.service.Export())
+}
 
-func (a *API) listAgents(w http.ResponseWriter,_ *http.Request){writeJSON(w,http.StatusOK,a.service.ListAgents())}
-func (a *API) createAgent(w http.ResponseWriter,r *http.Request){
+func (a *API) listAgents(w http.ResponseWriter, _ *http.Request) {
+	writeJSON(w, http.StatusOK, a.service.ListAgents())
+}
+func (a *API) createAgent(w http.ResponseWriter, r *http.Request) {
 	var input core.Agent
-	if !decode(w,r,&input){return}
-	result,err:=a.service.CreateAgent(input)
-	if err!=nil{writeError(w,http.StatusBadRequest,err.Error());return}
-	writeJSON(w,http.StatusCreated,result)
+	if !decode(w, r, &input) {
+		return
+	}
+	result, err := a.service.CreateAgent(input)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusCreated, result)
 }
-func (a *API) getAgent(w http.ResponseWriter,r *http.Request){
-	value,err:=a.service.Agent(r.PathValue("id"))
-	writeValue(w,value,err,"agent")
+func (a *API) getAgent(w http.ResponseWriter, r *http.Request) {
+	value, err := a.service.Agent(r.PathValue("id"))
+	writeValue(w, value, err, "agent")
 }
-func (a *API) agentStatus(w http.ResponseWriter,r *http.Request){
-	var input struct{Status core.AgentStatus `json:"status"`}
-	if !decode(w,r,&input){return}
-	value,err:=a.service.SetAgentStatus(r.PathValue("id"),input.Status)
-	writeValue(w,value,err,"agent")
+func (a *API) agentStatus(w http.ResponseWriter, r *http.Request) {
+	var input struct {
+		Status core.AgentStatus `json:"status"`
+	}
+	if !decode(w, r, &input) {
+		return
+	}
+	value, err := a.service.SetAgentStatus(r.PathValue("id"), input.Status)
+	writeValue(w, value, err, "agent")
 }
-func (a *API) rotateCredential(w http.ResponseWriter,r *http.Request){
-	value,err:=a.service.RotateCredential(r.PathValue("id"))
-	if err!=nil{writeServiceError(w,err,"agent");return}
-	writeJSON(w,http.StatusOK,map[string]string{"api_key":value})
+func (a *API) rotateCredential(w http.ResponseWriter, r *http.Request) {
+	value, err := a.service.RotateCredential(r.PathValue("id"))
+	if err != nil {
+		writeServiceError(w, err, "agent")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"api_key": value})
 }
-func (a *API) performance(w http.ResponseWriter,r *http.Request){
-	id:=r.PathValue("id")
-	if !authorizeAgent(w,r,id){return}
-	value,err:=a.service.Performance(id)
-	writeValue(w,value,err,"agent")
+func (a *API) performance(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if !authorizeAgent(w, r, id) {
+		return
+	}
+	value, err := a.service.Performance(id)
+	writeValue(w, value, err, "agent")
 }
-func (a *API) agentUsage(w http.ResponseWriter,r *http.Request){
-	id:=r.PathValue("id")
-	if !authorizeAgent(w,r,id){return}
-	writeJSON(w,http.StatusOK,a.service.Usage(id))
+func (a *API) agentUsage(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if !authorizeAgent(w, r, id) {
+		return
+	}
+	writeJSON(w, http.StatusOK, a.service.Usage(id))
 }
-func (a *API) agentEvents(w http.ResponseWriter,r *http.Request){
-	id:=r.PathValue("id")
-	if !authorizeAgent(w,r,id){return}
-	writeJSON(w,http.StatusOK,a.service.Events(id))
+func (a *API) agentEvents(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if !authorizeAgent(w, r, id) {
+		return
+	}
+	writeJSON(w, http.StatusOK, a.service.Events(id))
 }
-func (a *API) certifications(w http.ResponseWriter,r *http.Request){
-	id:=r.PathValue("id")
-	if !authorizeAgent(w,r,id){return}
-	writeJSON(w,http.StatusOK,a.service.Certifications(id))
+func (a *API) certifications(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if !authorizeAgent(w, r, id) {
+		return
+	}
+	writeJSON(w, http.StatusOK, a.service.Certifications(id))
 }
 
-func (a *API) listPolicies(w http.ResponseWriter,_ *http.Request){writeJSON(w,http.StatusOK,a.service.ListPolicies())}
-func (a *API) createPolicy(w http.ResponseWriter,r *http.Request){
+func (a *API) listPolicies(w http.ResponseWriter, _ *http.Request) {
+	writeJSON(w, http.StatusOK, a.service.ListPolicies())
+}
+func (a *API) createPolicy(w http.ResponseWriter, r *http.Request) {
 	var input core.Policy
-	if !decode(w,r,&input){return}
-	value,err:=a.service.CreatePolicy(input)
-	if err!=nil{writeError(w,http.StatusBadRequest,err.Error());return}
-	writeJSON(w,http.StatusCreated,value)
+	if !decode(w, r, &input) {
+		return
+	}
+	value, err := a.service.CreatePolicy(input)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusCreated, value)
 }
-func (a *API) evaluate(w http.ResponseWriter,r *http.Request){
+func (a *API) evaluate(w http.ResponseWriter, r *http.Request) {
 	var input core.ActionRequest
-	if !decode(w,r,&input){return}
-	if !authorizeAgent(w,r,input.AgentID){return}
-	value,err:=a.service.Evaluate(input)
-	if err!=nil{writeServiceError(w,err,"agent");return}
-	writeJSON(w,http.StatusOK,value)
+	if !decode(w, r, &input) {
+		return
+	}
+	if !authorizeAgent(w, r, input.AgentID) {
+		return
+	}
+	value, err := a.service.Evaluate(input)
+	if err != nil {
+		writeServiceError(w, err, "agent")
+		return
+	}
+	writeJSON(w, http.StatusOK, value)
 }
 
-func (a *API) listApprovals(w http.ResponseWriter,_ *http.Request){writeJSON(w,http.StatusOK,a.service.ListApprovals())}
-func (a *API) resolveApproval(w http.ResponseWriter,r *http.Request){
-	var input struct{Status core.ApprovalStatus `json:"status"`;ResolvedBy string `json:"resolved_by"`;Note string `json:"note"`}
-	if !decode(w,r,&input){return}
-	value,err:=a.service.ResolveApproval(r.PathValue("id"),input.Status,input.ResolvedBy,input.Note)
-	writeValue(w,value,err,"approval")
+func (a *API) listApprovals(w http.ResponseWriter, _ *http.Request) {
+	writeJSON(w, http.StatusOK, a.service.ListApprovals())
+}
+func (a *API) resolveApproval(w http.ResponseWriter, r *http.Request) {
+	var input struct {
+		Status     core.ApprovalStatus `json:"status"`
+		ResolvedBy string              `json:"resolved_by"`
+		Note       string              `json:"note"`
+	}
+	if !decode(w, r, &input) {
+		return
+	}
+	value, err := a.service.ResolveApproval(r.PathValue("id"), input.Status, input.ResolvedBy, input.Note)
+	writeValue(w, value, err, "approval")
 }
 
-func (a *API) recordUsage(w http.ResponseWriter,r *http.Request){
+func (a *API) recordUsage(w http.ResponseWriter, r *http.Request) {
 	var input core.UsageRecord
-	if !decode(w,r,&input){return}
-	if !authorizeAgent(w,r,input.AgentID){return}
-	usage,total,over,err:=a.service.RecordUsage(input)
-	if err!=nil{writeServiceError(w,err,"agent");return}
-	writeJSON(w,http.StatusCreated,map[string]any{"usage":usage,"month_spend_usd":total,"budget_exceeded":over})
+	if !decode(w, r, &input) {
+		return
+	}
+	if !authorizeAgent(w, r, input.AgentID) {
+		return
+	}
+	usage, total, over, err := a.service.RecordUsage(input)
+	if err != nil {
+		writeServiceError(w, err, "agent")
+		return
+	}
+	writeJSON(w, http.StatusCreated, map[string]any{"usage": usage, "month_spend_usd": total, "budget_exceeded": over})
 }
-func (a *API) recordEvent(w http.ResponseWriter,r *http.Request){
+func (a *API) recordEvent(w http.ResponseWriter, r *http.Request) {
 	var input core.Event
-	if !decode(w,r,&input){return}
-	if !authorizeAgent(w,r,input.AgentID){return}
-	value,err:=a.service.RecordEvent(input)
-	if err!=nil{writeServiceError(w,err,"agent");return}
-	writeJSON(w,http.StatusCreated,value)
+	if !decode(w, r, &input) {
+		return
+	}
+	if !authorizeAgent(w, r, input.AgentID) {
+		return
+	}
+	value, err := a.service.RecordEvent(input)
+	if err != nil {
+		writeServiceError(w, err, "agent")
+		return
+	}
+	writeJSON(w, http.StatusCreated, value)
 }
 
-func (a *API) listSecrets(w http.ResponseWriter,_ *http.Request){writeJSON(w,http.StatusOK,a.service.ListSecrets())}
-func (a *API) createSecret(w http.ResponseWriter,r *http.Request){
-	var input struct{Name string `json:"name"`;Value string `json:"value"`;ScopeAgentID string `json:"scope_agent_id"`}
-	if !decode(w,r,&input){return}
-	value,err:=a.service.CreateSecret(input.Name,input.Value,input.ScopeAgentID)
-	if err!=nil{writeError(w,http.StatusBadRequest,err.Error());return}
-	writeJSON(w,http.StatusCreated,value)
+func (a *API) listSecrets(w http.ResponseWriter, _ *http.Request) {
+	writeJSON(w, http.StatusOK, a.service.ListSecrets())
 }
-func (a *API) rotateSecret(w http.ResponseWriter,r *http.Request){
-	var input struct{Value string `json:"value"`}
-	if !decode(w,r,&input){return}
-	value,err:=a.service.RotateSecret(r.PathValue("id"),input.Value)
-	writeValue(w,value,err,"secret")
+func (a *API) createSecret(w http.ResponseWriter, r *http.Request) {
+	var input struct {
+		Name         string `json:"name"`
+		Value        string `json:"value"`
+		ScopeAgentID string `json:"scope_agent_id"`
+	}
+	if !decode(w, r, &input) {
+		return
+	}
+	value, err := a.service.CreateSecret(input.Name, input.Value, input.ScopeAgentID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusCreated, value)
 }
-func (a *API) createLease(w http.ResponseWriter,r *http.Request){
-	var input struct{SecretID string `json:"secret_id"`;AgentID string `json:"agent_id"`;TTLSeconds int `json:"ttl_seconds"`}
-	if !decode(w,r,&input){return}
-	value,err:=a.service.CreateLease(input.SecretID,input.AgentID,time.Duration(input.TTLSeconds)*time.Second)
-	if err!=nil{writeError(w,http.StatusBadRequest,err.Error());return}
-	writeJSON(w,http.StatusCreated,value)
+func (a *API) rotateSecret(w http.ResponseWriter, r *http.Request) {
+	var input struct {
+		Value string `json:"value"`
+	}
+	if !decode(w, r, &input) {
+		return
+	}
+	value, err := a.service.RotateSecret(r.PathValue("id"), input.Value)
+	writeValue(w, value, err, "secret")
 }
-func (a *API) redeemLease(w http.ResponseWriter,r *http.Request){
-	current:=currentActor(r)
-	if current.admin{writeError(w,http.StatusBadRequest,"redeem requires an agent credential");return}
-	value,err:=a.service.RedeemLease(r.PathValue("id"),current.agentID)
-	if err!=nil{writeServiceError(w,err,"lease");return}
-	writeJSON(w,http.StatusOK,map[string]string{"value":value})
+func (a *API) createLease(w http.ResponseWriter, r *http.Request) {
+	var input struct {
+		SecretID   string `json:"secret_id"`
+		AgentID    string `json:"agent_id"`
+		TTLSeconds int    `json:"ttl_seconds"`
+	}
+	if !decode(w, r, &input) {
+		return
+	}
+	value, err := a.service.CreateLease(input.SecretID, input.AgentID, time.Duration(input.TTLSeconds)*time.Second)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusCreated, value)
+}
+func (a *API) redeemLease(w http.ResponseWriter, r *http.Request) {
+	current := currentActor(r)
+	if current.admin {
+		writeError(w, http.StatusBadRequest, "redeem requires an agent credential")
+		return
+	}
+	value, err := a.service.RedeemLease(r.PathValue("id"), current.agentID)
+	if err != nil {
+		writeServiceError(w, err, "lease")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"value": value})
 }
 
-func (a *API) listProviders(w http.ResponseWriter,_ *http.Request){writeJSON(w,http.StatusOK,a.service.ListProviders())}
-func (a *API) createProvider(w http.ResponseWriter,r *http.Request){
+func (a *API) listProviders(w http.ResponseWriter, _ *http.Request) {
+	writeJSON(w, http.StatusOK, a.service.ListProviders())
+}
+func (a *API) createProvider(w http.ResponseWriter, r *http.Request) {
 	var input core.RelayProvider
-	if !decode(w,r,&input){return}
-	value,err:=a.service.CreateProvider(input)
-	if err!=nil{writeError(w,http.StatusBadRequest,err.Error());return}
-	writeJSON(w,http.StatusCreated,value)
+	if !decode(w, r, &input) {
+		return
+	}
+	value, err := a.service.CreateProvider(input)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusCreated, value)
 }
-func (a *API) relayChat(w http.ResponseWriter,r *http.Request){
+func (a *API) relayChat(w http.ResponseWriter, r *http.Request) {
 	var input core.RelayRequest
-	if !decodeLimit(w,r,&input,16<<20){return}
-	if !authorizeAgent(w,r,input.AgentID){return}
-	status,body,provider,err:=a.service.RelayChat(r.Context(),input)
-	if err!=nil{writeError(w,http.StatusBadGateway,err.Error());return}
-	w.Header().Set("Content-Type","application/json")
-	w.Header().Set("X-Heimda11-Provider",provider)
+	if !decodeLimit(w, r, &input, 16<<20) {
+		return
+	}
+	if !authorizeAgent(w, r, input.AgentID) {
+		return
+	}
+	status, body, provider, err := a.service.RelayChat(r.Context(), input)
+	if err != nil {
+		writeError(w, http.StatusBadGateway, err.Error())
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("X-Heimda11-Provider", provider)
 	w.WriteHeader(status)
-	_,_=w.Write(body)
+	_, _ = w.Write(body)
 }
 
-func (a *API) searchMemory(w http.ResponseWriter,r *http.Request){
-	current:=currentActor(r)
-	agentID:=current.agentID
-	if current.admin{agentID=strings.TrimSpace(r.URL.Query().Get("agent_id"))}
-	writeJSON(w,http.StatusOK,a.service.SearchMemory(r.URL.Query().Get("q"),r.URL.Query().Get("namespace"),agentID))
+func (a *API) searchMemory(w http.ResponseWriter, r *http.Request) {
+	current := currentActor(r)
+	agentID := current.agentID
+	if current.admin {
+		agentID = strings.TrimSpace(r.URL.Query().Get("agent_id"))
+	}
+	writeJSON(w, http.StatusOK, a.service.SearchMemory(r.URL.Query().Get("q"), r.URL.Query().Get("namespace"), agentID))
 }
-func (a *API) createMemory(w http.ResponseWriter,r *http.Request){
+func (a *API) createMemory(w http.ResponseWriter, r *http.Request) {
 	var input core.MemoryItem
-	if !decode(w,r,&input){return}
-	value,err:=a.service.CreateMemoryItem(input)
-	if err!=nil{writeError(w,http.StatusBadRequest,err.Error());return}
-	writeJSON(w,http.StatusCreated,value)
+	if !decode(w, r, &input) {
+		return
+	}
+	value, err := a.service.CreateMemoryItem(input)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusCreated, value)
 }
-func (a *API) addCertification(w http.ResponseWriter,r *http.Request){
+func (a *API) addCertification(w http.ResponseWriter, r *http.Request) {
 	var input core.Certification
-	if !decode(w,r,&input){return}
-	value,err:=a.service.AddCertification(input)
-	if err!=nil{writeServiceError(w,err,"agent");return}
-	writeJSON(w,http.StatusCreated,value)
+	if !decode(w, r, &input) {
+		return
+	}
+	value, err := a.service.AddCertification(input)
+	if err != nil {
+		writeServiceError(w, err, "agent")
+		return
+	}
+	writeJSON(w, http.StatusCreated, value)
 }
 
-func (a *API) listFlows(w http.ResponseWriter,_ *http.Request){writeJSON(w,http.StatusOK,a.service.Flows())}
-func (a *API) createFlow(w http.ResponseWriter,r *http.Request){
+func (a *API) listFlows(w http.ResponseWriter, _ *http.Request) {
+	writeJSON(w, http.StatusOK, a.service.Flows())
+}
+func (a *API) createFlow(w http.ResponseWriter, r *http.Request) {
 	var input core.FlowDefinition
-	if !decode(w,r,&input){return}
-	value,err:=a.service.CreateFlow(input)
-	if err!=nil{writeError(w,http.StatusBadRequest,err.Error());return}
-	writeJSON(w,http.StatusCreated,value)
+	if !decode(w, r, &input) {
+		return
+	}
+	value, err := a.service.CreateFlow(input)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusCreated, value)
 }
-func (a *API) listFlowRuns(w http.ResponseWriter,_ *http.Request){writeJSON(w,http.StatusOK,a.service.FlowRuns())}
-func (a *API) startFlow(w http.ResponseWriter,r *http.Request){
-	value,err:=a.service.StartFlow(r.PathValue("id"))
-	writeValue(w,value,err,"flow")
+func (a *API) listFlowRuns(w http.ResponseWriter, _ *http.Request) {
+	writeJSON(w, http.StatusOK, a.service.FlowRuns())
 }
-func (a *API) currentFlowStep(w http.ResponseWriter,r *http.Request){
-	run,step,gate,err:=a.service.CurrentFlowStep(r.PathValue("id"))
-	if err!=nil{writeServiceError(w,err,"flow run");return}
-	writeJSON(w,http.StatusOK,map[string]any{"run":run,"step":step,"gate":gate})
+func (a *API) startFlow(w http.ResponseWriter, r *http.Request) {
+	value, err := a.service.StartFlow(r.PathValue("id"))
+	writeValue(w, value, err, "flow")
 }
-func (a *API) completeFlowStep(w http.ResponseWriter,r *http.Request){
-	var input struct{Status string `json:"status"`;Message string `json:"message"`}
-	if !decode(w,r,&input){return}
-	value,err:=a.service.CompleteFlowStep(r.PathValue("id"),input.Status,input.Message)
-	if err!=nil{writeError(w,http.StatusBadRequest,err.Error());return}
-	writeJSON(w,http.StatusOK,value)
+func (a *API) currentFlowStep(w http.ResponseWriter, r *http.Request) {
+	run, step, gate, err := a.service.CurrentFlowStep(r.PathValue("id"))
+	if err != nil {
+		writeServiceError(w, err, "flow run")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"run": run, "step": step, "gate": gate})
+}
+func (a *API) completeFlowStep(w http.ResponseWriter, r *http.Request) {
+	var input struct {
+		Status  string `json:"status"`
+		Message string `json:"message"`
+	}
+	if !decode(w, r, &input) {
+		return
+	}
+	value, err := a.service.CompleteFlowStep(r.PathValue("id"), input.Status, input.Message)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, value)
 }
 
-func decode(w http.ResponseWriter,r *http.Request,dst any) bool { return decodeLimit(w,r,dst,1<<20) }
-func decodeLimit(w http.ResponseWriter,r *http.Request,dst any,limit int64) bool {
-	decoder:=json.NewDecoder(http.MaxBytesReader(w,r.Body,limit))
+func decode(w http.ResponseWriter, r *http.Request, dst any) bool {
+	return decodeLimit(w, r, dst, 1<<20)
+}
+func decodeLimit(w http.ResponseWriter, r *http.Request, dst any, limit int64) bool {
+	decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, limit))
 	decoder.DisallowUnknownFields()
-	if err:=decoder.Decode(dst);err!=nil{
-		writeError(w,http.StatusBadRequest,"invalid JSON: "+err.Error())
+	if err := decoder.Decode(dst); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid JSON: "+err.Error())
 		return false
 	}
-	if err:=decoder.Decode(&struct{}{});err!=io.EOF{
-		writeError(w,http.StatusBadRequest,"request body must contain one JSON value")
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		writeError(w, http.StatusBadRequest, "request body must contain one JSON value")
 		return false
 	}
 	return true
 }
-func writeServiceError(w http.ResponseWriter,err error,kind string){
-	if errors.Is(err,store.ErrNotFound){writeError(w,http.StatusNotFound,kind+" not found");return}
-	writeError(w,http.StatusBadRequest,err.Error())
+func writeServiceError(w http.ResponseWriter, err error, kind string) {
+	if errors.Is(err, store.ErrNotFound) {
+		writeError(w, http.StatusNotFound, kind+" not found")
+		return
+	}
+	writeError(w, http.StatusBadRequest, err.Error())
 }
-func writeValue(w http.ResponseWriter,value any,err error,kind string){
-	if err!=nil{writeServiceError(w,err,kind);return}
-	writeJSON(w,http.StatusOK,value)
+func writeValue(w http.ResponseWriter, value any, err error, kind string) {
+	if err != nil {
+		writeServiceError(w, err, kind)
+		return
+	}
+	writeJSON(w, http.StatusOK, value)
 }
-func writeError(w http.ResponseWriter,status int,message string){writeJSON(w,status,map[string]string{"error":message})}
-func writeJSON(w http.ResponseWriter,status int,value any){
-	w.Header().Set("Content-Type","application/json")
+func writeError(w http.ResponseWriter, status int, message string) {
+	writeJSON(w, status, map[string]string{"error": message})
+}
+func writeJSON(w http.ResponseWriter, status int, value any) {
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(value)
 }
 
-func parseInt(value string,fallback int) int {
-	v,err:=strconv.Atoi(value)
-	if err!=nil{return fallback}
+func parseInt(value string, fallback int) int {
+	v, err := strconv.Atoi(value)
+	if err != nil {
+		return fallback
+	}
 	return v
 }
