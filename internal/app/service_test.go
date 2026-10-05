@@ -119,6 +119,8 @@ func TestRelayFallsBackAndUsesVaultSecret(t *testing.T){
 	a:=createTestAgent(t,s,"relay")
 	secret,err:=s.CreateSecret("provider-key","abc123","")
 	if err!=nil{t.Fatal(err)}
+	_,err=s.CreatePolicy(core.Policy{Name:"relay allow",Priority:100,AgentID:a.Agent.ID,Tool:"llm",Action:"chat.completions",Effect:core.DecisionAllow})
+	if err!=nil{t.Fatal(err)}
 
 	good:=httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter,r *http.Request){
 		if r.URL.Path!="/chat/completions"{http.NotFound(w,r);return}
@@ -136,4 +138,17 @@ func TestRelayFallsBackAndUsesVaultSecret(t *testing.T){
 	status,body,provider,err:=s.RelayChat(context.Background(),core.RelayRequest{AgentID:a.Agent.ID,Payload:[]byte(`{"messages":[]}`)})
 	if err!=nil{t.Fatal(err)}
 	if status!=200||provider!="good"||!strings.Contains(string(body),`"ok":true`){t.Fatalf("status=%d provider=%s body=%s",status,provider,body)}
+}
+
+
+func TestCredentialRotationRevokesOldKey(t *testing.T){
+	s:=testService(t)
+	a:=createTestAgent(t,s,"rotate")
+	if id,ok:=s.AuthenticateAgentKey(a.APIKey);!ok||id!=a.Agent.ID{t.Fatal("initial credential should authenticate")}
+	next,err:=s.RotateCredential(a.Agent.ID)
+	if err!=nil{t.Fatal(err)}
+	if _,ok:=s.AuthenticateAgentKey(a.APIKey);ok{t.Fatal("old credential remained valid after rotation")}
+	if id,ok:=s.AuthenticateAgentKey(next);!ok||id!=a.Agent.ID{t.Fatal("new credential should authenticate")}
+	if _,err:=s.SetAgentStatus(a.Agent.ID,core.AgentSuspended);err!=nil{t.Fatal(err)}
+	if _,ok:=s.AuthenticateAgentKey(next);ok{t.Fatal("suspended agent credential should not authenticate")}
 }
