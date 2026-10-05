@@ -84,7 +84,17 @@ func (s *FileStore) persistLocked() error {
 func (s *FileStore) UpsertAgent(v core.Agent) error { s.mu.Lock(); defer s.mu.Unlock(); s.state.Agents[v.ID]=v; return s.persistLocked() }
 func (s *FileStore) Agent(id string) (core.Agent,error) { s.mu.RLock(); defer s.mu.RUnlock(); v,ok:=s.state.Agents[id]; if !ok{return core.Agent{},ErrNotFound}; return v,nil }
 func (s *FileStore) Agents() []core.Agent { s.mu.RLock(); defer s.mu.RUnlock(); out:=make([]core.Agent,0,len(s.state.Agents)); for _,v:=range s.state.Agents{out=append(out,v)}; sort.Slice(out,func(i,j int)bool{return out[i].CreatedAt.Before(out[j].CreatedAt)}); return out }
-func (s *FileStore) SetCredential(hash, agentID string) error { s.mu.Lock(); defer s.mu.Unlock(); s.state.Credentials[hash]=agentID; return s.persistLocked() }
+func (s *FileStore) ReplaceCredential(hash, agentID string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for existingHash, existingAgentID := range s.state.Credentials {
+		if existingAgentID == agentID {
+			delete(s.state.Credentials, existingHash)
+		}
+	}
+	s.state.Credentials[hash] = agentID
+	return s.persistLocked()
+}
 func (s *FileStore) CredentialAgent(hash string) (string,bool) { s.mu.RLock(); defer s.mu.RUnlock(); v,ok:=s.state.Credentials[hash]; return v,ok }
 
 func (s *FileStore) UpsertPolicy(v core.Policy) error { s.mu.Lock(); defer s.mu.Unlock(); s.state.Policies[v.ID]=v; return s.persistLocked() }
