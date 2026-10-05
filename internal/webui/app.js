@@ -65,7 +65,7 @@ function renderFlows(items){
   document.querySelectorAll("[data-startflow]").forEach(btn=>btn.onclick=async()=>{await api("/v1/flows/"+btn.dataset.startflow+"/runs",{method:"POST",body:"{}"});notify("Flow started");await refreshAll()});
 }
 function renderRuns(items){
-  $("runsList").innerHTML=items.map(r=>'<div class="item"><div class="top"><b>'+esc(r.id)+'</b>'+pill(r.status)+'</div><div class="meta">flow '+esc(r.flow_id)+' · step '+r.current_step+' · '+r.history.length+' completed</div><div class="item-actions">'+(r.status==="running"||r.status==="waiting_approval"?'<button data-next="'+esc(r.id)+'">Inspect current step</button>':"")+'</div></div>').join("")||'<div class="muted">No workflow runs.</div>';
+  $("runsList").innerHTML=items.map(r=>'<div class="item"><div class="top"><b>'+esc(r.id)+'</b>'+pill(r.status)+'</div><div class="meta">flow '+esc(r.flow_id)+' · step '+r.current_step+' · '+r.history.length+' completed</div><div class="item-actions">'+(r.status==="running"||r.status==="needs_gate"||r.status==="waiting_approval"?'<button data-next="'+esc(r.id)+'">Inspect current step</button>':"")+'</div></div>').join("")||'<div class="muted">No workflow runs.</div>';
   document.querySelectorAll("[data-next]").forEach(btn=>btn.onclick=async()=>{const v=await api("/v1/flow-runs/"+btn.dataset.next+"/current");notify(v.gate?("Gate: "+v.gate.decision+" · "+v.gate.reason):"Flow has no current step");await refreshAll()});
 }
 async function renderPerformance(agents){
