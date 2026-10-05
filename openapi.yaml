@@ -1,0 +1,139 @@
+openapi: 3.1.0
+info:
+  title: Heimda11 API
+  version: 0.1.0
+  description: Self-hosted Digital Workforce OS control and agent operations API.
+servers:
+  - url: http://localhost:8080
+security:
+  - bearerAuth: []
+paths:
+  /healthz:
+    get:
+      security: []
+      responses:
+        "200": {description: Healthy}
+  /v1/meta:
+    get:
+      security: []
+      responses:
+        "200": {description: Runtime metadata}
+  /v1/agents:
+    get:
+      responses:
+        "200": {description: Digital workforce}
+    post:
+      responses:
+        "201": {description: Worker and one-time API key}
+  /v1/agents/{id}/status:
+    post:
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+      responses:
+        "200": {description: Updated lifecycle state}
+  /v1/agents/{id}/performance:
+    get:
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+      responses:
+        "200": {description: Worker task/cost/value performance}
+  /v1/policies:
+    get:
+      responses:
+        "200": {description: Gate policies}
+    post:
+      responses:
+        "201": {description: Policy created}
+  /v1/gate/evaluate:
+    post:
+      responses:
+        "200":
+          description: allow, deny or approval_required decision
+  /v1/approvals:
+    get:
+      responses:
+        "200": {description: Human approval queue}
+  /v1/approvals/{id}/resolve:
+    post:
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+      responses:
+        "200": {description: Approval resolved}
+  /v1/meter/usage:
+    post:
+      responses:
+        "201": {description: Usage recorded and budget status returned}
+  /v1/watch/events:
+    post:
+      responses:
+        "201": {description: Operational event recorded}
+  /v1/vault/secrets:
+    get:
+      responses:
+        "200": {description: Secret metadata only; plaintext is never listed}
+    post:
+      responses:
+        "201": {description: Secret encrypted}
+  /v1/vault/leases:
+    post:
+      responses:
+        "201": {description: Short-lived one-time lease}
+  /v1/vault/leases/{id}/redeem:
+    post:
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+      responses:
+        "200": {description: One-time plaintext response to scoped agent}
+  /v1/relay/providers:
+    get:
+      responses:
+        "200": {description: Relay provider configuration}
+    post:
+      responses:
+        "201": {description: Relay provider configured}
+  /v1/relay/chat/completions:
+    post:
+      responses:
+        "200": {description: First successful OpenAI-compatible upstream response}
+        "502": {description: All providers failed}
+  /v1/memory:
+    get:
+      responses:
+        "200": {description: ACL-filtered memory search}
+    post:
+      responses:
+        "201": {description: Memory item created}
+  /v1/training/certifications:
+    post:
+      responses:
+        "201": {description: Agent certification issued}
+  /v1/flows:
+    get:
+      responses:
+        "200": {description: Flow definitions}
+    post:
+      responses:
+        "201": {description: Governed flow created}
+  /v1/flows/{id}/runs:
+    post:
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+      responses:
+        "200": {description: Flow run created in needs_gate state}
+  /v1/flow-runs/{id}/current:
+    get:
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+      responses:
+        "200": {description: Current step plus Gate decision}
+  /v1/flow-runs/{id}/complete:
+    post:
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+      responses:
+        "200": {description: Authorized step completed}
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
