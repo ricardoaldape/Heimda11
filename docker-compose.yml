@@ -1,0 +1,26 @@
+services:
+  heimda11:
+    build:
+      context: .
+    restart: unless-stopped
+    environment:
+      HEIMDA11_ADMIN_TOKEN: ${HEIMDA11_ADMIN_TOKEN:?Set HEIMDA11_ADMIN_TOKEN in .env}
+      HEIMDA11_MASTER_KEY: ${HEIMDA11_MASTER_KEY:?Set HEIMDA11_MASTER_KEY in .env}
+      HEIMDA11_ADDR: ":8080"
+      HEIMDA11_DATA_PATH: "/data/heimda11.json"
+      HEIMDA11_EDITION: "${HEIMDA11_EDITION:-community}"
+    ports:
+      - "${HEIMDA11_PORT:-8080}:8080"
+    volumes:
+      - heimda11_data:/data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  heimda11_data:
