@@ -43,11 +43,19 @@ func (s *Service) RelayChat(ctx context.Context, req core.RelayRequest) (int,[]b
 	agent,err:=s.store.Agent(req.AgentID)
 	if err!=nil{return 0,nil,"",err}
 	if agent.Status!=core.AgentActive{return 0,nil,"",errors.New("agent is not active")}
+	gate,err:=s.Evaluate(core.ActionRequest{AgentID:req.AgentID,Tool:"llm",Action:"chat.completions",TraceID:req.TraceID})
+	if err!=nil{return 0,nil,"",err}
+	if gate.Decision!=core.DecisionAllow{
+		if gate.ApprovalID!=""{
+			return 0,nil,"",fmt.Errorf("relay blocked by Gate: %s (approval %s)",gate.Reason,gate.ApprovalID)
+		}
+		return 0,nil,"",errors.New("relay blocked by Gate: "+gate.Reason)
+	}
 	providers:=s.store.Providers()
 	var errs []string
 	for _,provider:=range providers{
 		if !provider.Enabled{continue}
-		secret,err:=s.secretValue(provider.SecretID)
+		secret,err:=s.secretValueForAgent(provider.SecretID,req.AgentID)
 		if err!=nil{
 			errs=append(errs,provider.Name+": secret unavailable")
 			continue
