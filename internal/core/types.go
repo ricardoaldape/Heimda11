@@ -216,13 +216,14 @@ type FlowStepResult struct {
 }
 
 type FlowRun struct {
-	ID        string           `json:"id"`
-	FlowID    string           `json:"flow_id"`
-	Status    string           `json:"status"`
-	Current   int              `json:"current_step"`
-	History   []FlowStepResult `json:"history"`
-	CreatedAt time.Time        `json:"created_at"`
-	UpdatedAt time.Time        `json:"updated_at"`
+	ID                string           `json:"id"`
+	FlowID            string           `json:"flow_id"`
+	Status            string           `json:"status"`
+	Current           int              `json:"current_step"`
+	PendingApprovalID string           `json:"pending_approval_id,omitempty"`
+	History           []FlowStepResult `json:"history"`
+	CreatedAt         time.Time        `json:"created_at"`
+	UpdatedAt         time.Time        `json:"updated_at"`
 }
 
 type AgentPerformance struct {
