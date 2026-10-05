@@ -84,7 +84,7 @@ func (s *Service) Flows() []core.FlowDefinition { return s.store.Flows() }
 func (s *Service) StartFlow(flowID string) (core.FlowRun,error) {
 	if _,err:=s.store.Flow(flowID);err!=nil{return core.FlowRun{},err}
 	now:=s.now()
-	run:=core.FlowRun{ID:core.NewID("run"),FlowID:flowID,Status:"running",History:[]core.FlowStepResult{},CreatedAt:now,UpdatedAt:now}
+	run:=core.FlowRun{ID:core.NewID("run"),FlowID:flowID,Status:"needs_gate",History:[]core.FlowStepResult{},CreatedAt:now,UpdatedAt:now}
 	if err:=s.store.PutFlowRun(run);err!=nil{return core.FlowRun{},err}
 	return run,nil
 }
@@ -120,8 +120,20 @@ func (s *Service) CurrentFlowStep(runID string) (core.FlowRun,*core.FlowStep,*co
 		result:=core.GateResult{Decision:core.DecisionAllow,PolicyID:approval.PolicyID,Reason:"human approval granted"}
 		return run,&step,&result,nil
 	}
+	if run.Status=="running" {
+		result:=core.GateResult{Decision:core.DecisionAllow,Reason:"step already authorized"}
+		return run,&step,&result,nil
+	}
+	if run.Status!="needs_gate" {
+		return core.FlowRun{},nil,nil,errors.New("flow is not ready for gate evaluation")
+	}
 	result,err:=s.Evaluate(core.ActionRequest{AgentID:step.AgentID,Tool:step.Tool,Action:step.Action,AmountUSD:step.AmountUSD,TraceID:run.ID})
 	if err!=nil{return core.FlowRun{},nil,nil,err}
+	if result.Decision==core.DecisionAllow{
+		run.Status="running"
+		run.UpdatedAt=s.now()
+		_ = s.store.PutFlowRun(run)
+	}
 	if result.Decision==core.DecisionApproval{
 		run.PendingApprovalID=result.ApprovalID
 		run.Status="waiting_approval"
@@ -153,7 +165,7 @@ func (s *Service) CompleteFlowStep(runID,status,message string) (core.FlowRun,er
 		run.Status="failed"
 	}else{
 		run.Current++
-		if run.Current>=len(flow.Steps){run.Status="completed"}
+		if run.Current>=len(flow.Steps){run.Status="completed"}else{run.Status="needs_gate"}
 	}
 	run.UpdatedAt=now
 	if err:=s.store.PutFlowRun(run);err!=nil{return core.FlowRun{},err}
