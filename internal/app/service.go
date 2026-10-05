@@ -47,7 +47,15 @@ func (s *Service) AuthenticateAgentKey(key string) (string, bool) {
 	if !strings.HasPrefix(key, "hmd_") {
 		return "", false
 	}
-	return s.store.CredentialAgent(credentialHash(key))
+	agentID, ok := s.store.CredentialAgent(credentialHash(key))
+	if !ok {
+		return "", false
+	}
+	agent, err := s.store.Agent(agentID)
+	if err != nil || agent.Status != core.AgentActive {
+		return "", false
+	}
+	return agentID, true
 }
 
 func (s *Service) CreateAgent(a core.Agent) (core.AgentCreateResult, error) {
@@ -75,7 +83,7 @@ func (s *Service) CreateAgent(a core.Agent) (core.AgentCreateResult, error) {
 		return core.AgentCreateResult{}, err
 	}
 	key := core.NewCredential()
-	if err := s.store.SetCredential(credentialHash(key), a.ID); err != nil {
+	if err := s.store.ReplaceCredential(credentialHash(key), a.ID); err != nil {
 		return core.AgentCreateResult{}, err
 	}
 	_ = s.audit(a.ID, "registry.agent_created", "success", "AI worker registered", nil)
@@ -87,7 +95,7 @@ func (s *Service) RotateCredential(agentID string) (string, error) {
 		return "", err
 	}
 	key := core.NewCredential()
-	if err := s.store.SetCredential(credentialHash(key), agentID); err != nil {
+	if err := s.store.ReplaceCredential(credentialHash(key), agentID); err != nil {
 		return "", err
 	}
 	_ = s.audit(agentID, "registry.credential_rotated", "success", "agent credential rotated", nil)
