@@ -27,10 +27,10 @@ func NewService(st *store.FileStore, cipher *secure.Cipher, edition string) *Ser
 		edition = "community"
 	}
 	return &Service{
-		store: st,
-		cipher: cipher,
+		store:   st,
+		cipher:  cipher,
 		edition: strings.ToLower(edition),
-		now: func() time.Time { return time.Now().UTC() },
+		now:     func() time.Time { return time.Now().UTC() },
 	}
 }
 
@@ -130,9 +130,15 @@ func (s *Service) CreatePolicy(p core.Policy) (core.Policy, error) {
 	if p.Name == "" {
 		return core.Policy{}, errors.New("name is required")
 	}
-	if p.AgentID == "" { p.AgentID = "*" }
-	if p.Tool == "" { p.Tool = "*" }
-	if p.Action == "" { p.Action = "*" }
+	if p.AgentID == "" {
+		p.AgentID = "*"
+	}
+	if p.Tool == "" {
+		p.Tool = "*"
+	}
+	if p.Action == "" {
+		p.Action = "*"
+	}
 	switch p.Effect {
 	case core.DecisionAllow, core.DecisionDeny, core.DecisionApproval:
 	default:
@@ -150,7 +156,7 @@ func (s *Service) CreatePolicy(p core.Policy) (core.Policy, error) {
 	if err := s.store.UpsertPolicy(p); err != nil {
 		return core.Policy{}, err
 	}
-	_ = s.audit(p.AgentID, "gate.policy_created", "success", "policy "+p.Name+" created", map[string]any{"policy_id":p.ID})
+	_ = s.audit(p.AgentID, "gate.policy_created", "success", "policy "+p.Name+" created", map[string]any{"policy_id": p.ID})
 	return p, nil
 }
 
@@ -240,7 +246,9 @@ func (s *Service) ResolveApproval(id string, status core.ApprovalStatus, by, not
 		return core.Approval{}, errors.New("status must be approved or rejected")
 	}
 	a, err := s.store.Approval(id)
-	if err != nil { return core.Approval{}, err }
+	if err != nil {
+		return core.Approval{}, err
+	}
 	if a.Status != core.ApprovalPending {
 		return core.Approval{}, errors.New("approval is already resolved")
 	}
@@ -253,7 +261,9 @@ func (s *Service) ResolveApproval(id string, status core.ApprovalStatus, by, not
 	a.ResolvedAt = &now
 	a.ResolvedBy = by
 	a.Note = strings.TrimSpace(note)
-	if err := s.store.PutApproval(a); err != nil { return core.Approval{}, err }
+	if err := s.store.PutApproval(a); err != nil {
+		return core.Approval{}, err
+	}
 	_ = s.store.AddEvent(core.Event{
 		ID: core.NewID("evt"), AgentID: a.AgentID, Type: "approval.resolved",
 		Tool: a.Tool, Action: a.Action, Status: string(a.Status), Message: a.Note, OccurredAt: now,
@@ -263,17 +273,23 @@ func (s *Service) ResolveApproval(id string, status core.ApprovalStatus, by, not
 
 func (s *Service) RecordUsage(u core.UsageRecord) (core.UsageRecord, float64, bool, error) {
 	agent, err := s.store.Agent(u.AgentID)
-	if err != nil { return core.UsageRecord{}, 0, false, fmt.Errorf("agent: %w", err) }
+	if err != nil {
+		return core.UsageRecord{}, 0, false, fmt.Errorf("agent: %w", err)
+	}
 	if u.CostUSD < 0 || u.InputTokens < 0 || u.OutputTokens < 0 {
 		return core.UsageRecord{}, 0, false, errors.New("token counts and cost cannot be negative")
 	}
 	u.ID = core.NewID("use")
-	if u.OccurredAt.IsZero() { u.OccurredAt = s.now() }
-	if err := s.store.AddUsage(u); err != nil { return core.UsageRecord{}, 0, false, err }
+	if u.OccurredAt.IsZero() {
+		u.OccurredAt = s.now()
+	}
+	if err := s.store.AddUsage(u); err != nil {
+		return core.UsageRecord{}, 0, false, err
+	}
 	total := s.MonthSpend(u.AgentID, u.OccurredAt)
 	over := agent.MonthlyBudget > 0 && total > agent.MonthlyBudget
 	if over {
-		_ = s.audit(u.AgentID, "meter.budget_exceeded", "warning", fmt.Sprintf("monthly spend %.4f USD exceeds budget %.4f USD", total, agent.MonthlyBudget), map[string]any{"trace_id":u.TraceID})
+		_ = s.audit(u.AgentID, "meter.budget_exceeded", "warning", fmt.Sprintf("monthly spend %.4f USD exceeds budget %.4f USD", total, agent.MonthlyBudget), map[string]any{"trace_id": u.TraceID})
 	}
 	return u, total, over, nil
 }
@@ -298,8 +314,12 @@ func (s *Service) RecordEvent(e core.Event) (core.Event, error) {
 		return core.Event{}, errors.New("type and status are required")
 	}
 	e.ID = core.NewID("evt")
-	if e.OccurredAt.IsZero() { e.OccurredAt = s.now() }
-	if err := s.store.AddEvent(e); err != nil { return core.Event{}, err }
+	if e.OccurredAt.IsZero() {
+		e.OccurredAt = s.now()
+	}
+	if err := s.store.AddEvent(e); err != nil {
+		return core.Event{}, err
+	}
 	a, _ := s.store.Agent(e.AgentID)
 	now := s.now()
 	a.LastSeenAt = &now
@@ -318,7 +338,7 @@ func (s *Service) Performance(agentID string) (core.AgentPerformance, error) {
 	for _, e := range s.store.Events(agentID) {
 		if e.Type == "task.completed" || e.Type == "task.failed" {
 			p.Tasks++
-			if e.Type == "task.completed" || strings.EqualFold(e.Status,"success") {
+			if e.Type == "task.completed" || strings.EqualFold(e.Status, "success") {
 				p.Successes++
 			} else {
 				p.Failures++
@@ -326,9 +346,15 @@ func (s *Service) Performance(agentID string) (core.AgentPerformance, error) {
 		}
 		p.ValueUSD += e.ValueUSD
 	}
-	for _, u := range s.store.Usage(agentID) { p.CostUSD += u.CostUSD }
-	if p.Tasks > 0 { p.SuccessRate = float64(p.Successes) / float64(p.Tasks) }
-	if p.CostUSD > 0 { p.ROI = (p.ValueUSD - p.CostUSD) / p.CostUSD }
+	for _, u := range s.store.Usage(agentID) {
+		p.CostUSD += u.CostUSD
+	}
+	if p.Tasks > 0 {
+		p.SuccessRate = float64(p.Successes) / float64(p.Tasks)
+	}
+	if p.CostUSD > 0 {
+		p.ROI = (p.ValueUSD - p.CostUSD) / p.CostUSD
+	}
 	return p, nil
 }
 
@@ -337,24 +363,38 @@ func (s *Service) Dashboard() core.Dashboard {
 	d := core.Dashboard{}
 	for _, a := range s.store.Agents() {
 		d.AgentsTotal++
-		if a.Status == core.AgentActive { d.AgentsActive++ }
+		if a.Status == core.AgentActive {
+			d.AgentsActive++
+		}
 	}
 	for _, a := range s.store.Approvals() {
-		if a.Status == core.ApprovalPending { d.PendingApprovals++ }
+		if a.Status == core.ApprovalPending {
+			d.PendingApprovals++
+		}
 	}
 	for _, e := range s.store.Events("") {
 		d.EventsTotal++
-		if strings.EqualFold(e.Status,"failed") || strings.EqualFold(e.Status,"error") { d.FailuresTotal++ }
-		if e.Type == "gate.decision" && e.Status == string(core.DecisionDeny) { d.BlockedTotal++ }
-		if e.OccurredAt.Year()==now.Year() && e.OccurredAt.Month()==now.Month() { d.MonthValueUSD += e.ValueUSD }
+		if strings.EqualFold(e.Status, "failed") || strings.EqualFold(e.Status, "error") {
+			d.FailuresTotal++
+		}
+		if e.Type == "gate.decision" && e.Status == string(core.DecisionDeny) {
+			d.BlockedTotal++
+		}
+		if e.OccurredAt.Year() == now.Year() && e.OccurredAt.Month() == now.Month() {
+			d.MonthValueUSD += e.ValueUSD
+		}
 	}
 	for _, u := range s.store.Usage("") {
-		if u.OccurredAt.Year()==now.Year() && u.OccurredAt.Month()==now.Month() { d.MonthCostUSD += u.CostUSD }
+		if u.OccurredAt.Year() == now.Year() && u.OccurredAt.Month() == now.Month() {
+			d.MonthCostUSD += u.CostUSD
+		}
 	}
 	d.SecretsTotal = len(s.store.Secrets())
 	d.MemoryItems = len(s.store.MemoryItems())
 	for _, run := range s.store.FlowRuns() {
-		if run.Status == "running" || run.Status == "needs_gate" || run.Status == "waiting_approval" { d.FlowsRunning++ }
+		if run.Status == "running" || run.Status == "needs_gate" || run.Status == "waiting_approval" {
+			d.FlowsRunning++
+		}
 	}
 	return d
 }
