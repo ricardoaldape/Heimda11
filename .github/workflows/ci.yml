@@ -17,7 +17,7 @@ concurrency:
 jobs:
   test-build:
     name: Test and build on HP self-hosted runner
-    runs-on: [self-hosted]
+    runs-on: [self-hosted, heimda11]
     timeout-minutes: 20
     steps:
       - name: Checkout
