@@ -45,12 +45,6 @@ jobs:
           & $env:HEIMDA11_GO build -trimpath -ldflags="-s -w" -o dist/heimda11-linux-amd64 ./cmd/heimda11
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-          $env:GOOS = "linux"
-          $env:GOARCH = "arm64"
-          $env:CGO_ENABLED = "0"
-          & $env:HEIMDA11_GO build -trimpath -ldflags="-s -w" -o dist/heimda11-linux-arm64 ./cmd/heimda11
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
           $env:GOOS = "windows"
           $env:GOARCH = "amd64"
           $env:CGO_ENABLED = "0"
