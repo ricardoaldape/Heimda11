@@ -57,6 +57,16 @@ Open `http://localhost:8080` on a trusted network. Use HTTPS before exposing the
 
 **Pro** is the commercial direction: unlimited workforce plus enterprise distribution/support. The architecture is intentionally self-hosted-first so customer token, inference, logs and storage costs remain customer-controlled.
 
+
+
+## Founding Company program
+
+Heimda11 Community is free and self-hosted.
+
+For companies already operating multiple AI agents in production, the **Founding Company** program is **USD $500/month** and includes guided self-hosted onboarding, an initial AI-workforce architecture review, help setting policies/budgets/approvals, and direct product feedback access.
+
+Interested? Open a GitHub issue titled **Founding Company** with a non-confidential way to contact you. Do not post credentials, customer data or other sensitive information.
+
 ## Development
 
 ```sh
