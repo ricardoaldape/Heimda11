@@ -19,41 +19,63 @@ jobs:
     name: Test and build on HP self-hosted runner
     runs-on: [self-hosted, heimda11]
     timeout-minutes: 20
+    env:
+      HEIMDA11_GO: C:\Tools\Go-1.23.12\bin\go.exe
+      HEIMDA11_GOFMT: C:\Tools\Go-1.23.12\bin\gofmt.exe
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Go 1.23
-        uses: actions/setup-go@v5
-        with:
-          go-version: "1.23.x"
-          cache: false
+      - name: Verify local Go toolchain
+        shell: powershell
+        run: |
+          & $env:HEIMDA11_GO version
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Go format check
-        shell: bash
+        shell: powershell
         run: |
-          gofmt -w .
+          & $env:HEIMDA11_GOFMT -w .
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           git diff --ignore-space-at-eol --exit-code -- '*.go'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Unit tests
-        run: go test ./...
+        shell: powershell
+        run: |
+          & $env:HEIMDA11_GO test ./...
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Vet
-        run: go vet ./...
+        shell: powershell
+        run: |
+          & $env:HEIMDA11_GO vet ./...
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Build host binary
-        run: go build -trimpath -o dist/heimda11-host ./cmd/heimda11
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          & $env:HEIMDA11_GO build -trimpath -o dist/heimda11-host.exe ./cmd/heimda11
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Build Linux AMD64 release binary
-        shell: bash
+        shell: powershell
         run: |
-          mkdir -p dist
-          GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o dist/heimda11-linux-amd64 ./cmd/heimda11
+          $env:GOOS = "linux"
+          $env:GOARCH = "amd64"
+          $env:CGO_ENABLED = "0"
+          & $env:HEIMDA11_GO build -trimpath -ldflags="-s -w" -o dist/heimda11-linux-amd64 ./cmd/heimda11
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Build Windows AMD64 release binary
-        shell: bash
+        shell: powershell
         run: |
-          GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o dist/heimda11-windows-amd64.exe ./cmd/heimda11
+          $env:GOOS = "windows"
+          $env:GOARCH = "amd64"
+          $env:CGO_ENABLED = "0"
+          & $env:HEIMDA11_GO build -trimpath -ldflags="-s -w" -o dist/heimda11-windows-amd64.exe ./cmd/heimda11
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Upload binaries
         uses: actions/upload-artifact@v4
