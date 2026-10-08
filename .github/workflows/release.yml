@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   release:
-    runs-on: [self-hosted]
+    runs-on: [self-hosted, heimda11]
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
