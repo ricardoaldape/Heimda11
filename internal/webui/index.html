@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Heimda11 · Digital Workforce OS</title>
+  <link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body>
+  <div class="shell">
+    <aside>
+      <div class="brand">
+        <div class="mark">H11</div>
+        <div><strong>Heimda11</strong><span>Digital Workforce OS</span></div>
+      </div>
+      <nav>
+        <button class="nav active" data-view="overview">Overview</button>
+        <button class="nav" data-view="workforce">Workforce</button>
+        <button class="nav" data-view="security">Gate + Vault</button>
+        <button class="nav" data-view="operations">Meter + Watch + Relay</button>
+        <button class="nav" data-view="knowledge">Memory + Training</button>
+        <button class="nav" data-view="flows">Flow</button>
+      </nav>
+      <div class="connection">
+        <label>Admin token</label>
+        <input id="adminToken" type="password" autocomplete="off" placeholder="Bearer token">
+        <button id="connectBtn" class="primary">Connect</button>
+        <div id="connectionState" class="small muted">Not connected</div>
+      </div>
+    </aside>
+
+    <main>
+      <header>
+        <div>
+          <div class="eyebrow">SELF-HOSTED CONTROL PLANE</div>
+          <h1 id="pageTitle">Overview</h1>
+        </div>
+        <div class="header-actions">
+          <span id="editionBadge" class="badge">—</span>
+          <button id="refreshBtn">Refresh</button>
+        </div>
+      </header>
+
+      <div id="toast" class="toast hidden"></div>
+
+      <section id="overview" class="view active">
+        <div class="metrics">
+          <article><span>AI workers</span><strong id="mAgents">—</strong></article>
+          <article><span>Active</span><strong id="mActive">—</strong></article>
+          <article><span>Pending approvals</span><strong id="mApprovals">—</strong></article>
+          <article><span>Blocked</span><strong id="mBlocked">—</strong></article>
+          <article><span>AI spend · month</span><strong id="mCost">—</strong></article>
+          <article><span>Attributed value · month</span><strong id="mValue">—</strong></article>
+          <article><span>Secrets</span><strong id="mSecrets">—</strong></article>
+          <article><span>Flows running</span><strong id="mFlows">—</strong></article>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><div><h2>What Heimda11 controls</h2><p>One self-hosted system of record for AI workers.</p></div></div>
+          <div class="cap-grid">
+            <div><b>Registry / Control</b><span>Identity, owner, role and lifecycle.</span></div>
+            <div><b>Gate</b><span>Default-deny policies and human approval.</span></div>
+            <div><b>Meter</b><span>Tokens, spend, budget and ROI.</span></div>
+            <div><b>Watch</b><span>Events, failures and trace history.</span></div>
+            <div><b>Vault</b><span>Encrypted secrets and one-time leases.</span></div>
+            <div><b>Relay</b><span>Model-provider failover.</span></div>
+            <div><b>Memory</b><span>Private enterprise context with ACL.</span></div>
+            <div><b>Flow</b><span>Governed multi-agent workflows.</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="workforce" class="view">
+        <div class="split">
+          <div class="panel">
+            <div class="panel-head"><div><h2>Digital workforce</h2><p>Every agent is an accountable worker.</p></div></div>
+            <div class="table-wrap"><table><thead><tr><th>Worker</th><th>Role</th><th>Owner</th><th>Autonomy</th><th>Budget</th><th>Status</th><th></th></tr></thead><tbody id="agentsBody"></tbody></table></div>
+          </div>
+          <form id="agentForm" class="panel form-panel">
+            <h2>Hire AI worker</h2>
+            <label>Name<input name="name" required placeholder="SOFIA-SALES-01"></label>
+            <label>Role<input name="role" required placeholder="Sales development representative"></label>
+            <label>Department<input name="department" placeholder="Sales"></label>
+            <label>Human owner<input name="human_owner" required placeholder="Operations lead"></label>
+            <div class="row2">
+              <label>Autonomy<select name="autonomy_level"><option value="0">L0 · Recommend only</option><option value="1">L1 · Reversible actions</option><option value="2">L2 · Limited execution</option><option value="3">L3 · Delegated autonomy</option><option value="4">L4 · Supervisory</option></select></label>
+              <label>Monthly budget USD<input name="monthly_budget_usd" type="number" min="0" step="0.01" value="25"></label>
+            </div>
+            <label>Allowed tools<input name="allowed_tools" placeholder="gmail,crm,quotes"></label>
+            <button class="primary" type="submit">Register worker</button>
+            <div id="newCredential" class="credential hidden"></div>
+          </form>
+        </div>
+      </section>
+
+      <section id="security" class="view">
+        <div class="split">
+          <form id="policyForm" class="panel form-panel">
+            <h2>Create Gate policy</h2>
+            <label>Name<input name="name" required placeholder="Refunds need approval"></label>
+            <div class="row2"><label>Agent ID<input name="agent_id" value="*" required></label><label>Priority<input name="priority" type="number" value="100"></label></div>
+            <div class="row2"><label>Tool<input name="tool" value="*" required></label><label>Action<input name="action" value="*" required></label></div>
+            <div class="row2"><label>Min USD<input name="min_amount_usd" type="number" min="0" step="0.01" value="0"></label><label>Max USD<input name="max_amount_usd" type="number" min="0" step="0.01" value="0"></label></div>
+            <label>Decision<select name="effect"><option value="approval_required">Human approval</option><option value="allow">Allow</option><option value="deny">Deny</option></select></label>
+            <label>Reason<input name="reason" placeholder="Financial action requires a human"></label>
+            <button class="primary" type="submit">Create policy</button>
+          </form>
+          <div class="panel">
+            <div class="panel-head"><div><h2>Policies</h2><p>Highest priority matching rule wins; otherwise deny.</p></div></div>
+            <div id="policiesList" class="stack"></div>
+          </div>
+        </div>
+        <div class="split">
+          <div class="panel">
+            <div class="panel-head"><div><h2>Approval queue</h2><p>Human authority stays in the loop.</p></div></div>
+            <div id="approvalsList" class="stack"></div>
+          </div>
+          <form id="secretForm" class="panel form-panel">
+            <h2>Vault</h2>
+            <label>Secret name<input name="name" required placeholder="OpenAI production key"></label>
+            <label>Value<input name="value" type="password" required></label>
+            <label>Scope to Agent ID<input name="scope_agent_id" placeholder="Optional"></label>
+            <button class="primary" type="submit">Store encrypted secret</button>
+            <div id="secretsList" class="stack compact"></div>
+          </form>
+        </div>
+      </section>
+
+      <section id="operations" class="view">
+        <div class="split">
+          <div class="panel">
+            <div class="panel-head"><div><h2>Performance</h2><p>Cost and value by digital worker.</p></div></div>
+            <div class="table-wrap"><table><thead><tr><th>Agent</th><th>Tasks</th><th>Success</th><th>Cost</th><th>Value</th><th>ROI</th></tr></thead><tbody id="performanceBody"></tbody></table></div>
+          </div>
+          <form id="providerForm" class="panel form-panel">
+            <h2>Relay provider</h2>
+            <label>Name<input name="name" required placeholder="OpenAI primary"></label>
+            <label>Base URL<input name="base_url" required placeholder="https://api.openai.com/v1"></label>
+            <label>Model override<input name="model" placeholder="Optional"></label>
+            <label>Vault Secret ID<input name="secret_id" required placeholder="sec_..."></label>
+            <div class="row2"><label>Priority<input name="priority" type="number" value="10"></label><label>Timeout sec<input name="timeout_seconds" type="number" value="45"></label></div>
+            <button class="primary" type="submit">Add provider</button>
+            <div id="providersList" class="stack compact"></div>
+          </form>
+        </div>
+      </section>
+
+      <section id="knowledge" class="view">
+        <div class="split">
+          <form id="memoryForm" class="panel form-panel">
+            <h2>Company Memory</h2>
+            <label>Namespace<input name="namespace" required value="company"></label>
+            <label>Title<input name="title" required></label>
+            <label>Content<textarea name="content" rows="6" required></textarea></label>
+            <label>Tags<input name="tags" placeholder="policy,sales,mexico"></label>
+            <label>Allowed Agent IDs<input name="allowed_agent_ids" placeholder="Blank = all; comma separated"></label>
+            <button class="primary" type="submit">Add memory</button>
+          </form>
+          <div class="panel">
+            <div class="panel-head"><div><h2>Memory search</h2><p>Search private operational context.</p></div></div>
+            <div class="search"><input id="memoryQuery" placeholder="Search memory"><button id="memorySearchBtn">Search</button></div>
+            <div id="memoryList" class="stack"></div>
+          </div>
+        </div>
+        <form id="certForm" class="panel form-inline">
+          <h2>Certify an AI worker</h2>
+          <input name="agent_id" required placeholder="Agent ID">
+          <input name="skill" required placeholder="Skill">
+          <input name="score" type="number" min="0" max="100" step="0.1" required placeholder="Score">
+          <input name="issuer" required placeholder="Issuer">
+          <button class="primary">Issue certification</button>
+        </form>
+      </section>
+
+      <section id="flows" class="view">
+        <div class="split">
+          <form id="flowForm" class="panel form-panel">
+            <h2>Create governed flow</h2>
+            <label>Name<input name="name" required placeholder="Lead to signed quote"></label>
+            <label>Steps JSON<textarea name="steps" rows="12" required placeholder='[{"name":"Qualify","agent_id":"agt_...","tool":"crm","action":"qualify"}]'></textarea></label>
+            <button class="primary" type="submit">Create flow</button>
+          </form>
+          <div class="panel">
+            <div class="panel-head"><div><h2>Flows</h2><p>Start a flow, then Gate controls every step.</p></div></div>
+            <div id="flowsList" class="stack"></div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><div><h2>Runs</h2><p>Running, waiting for approval, completed and failed.</p></div></div>
+          <div id="runsList" class="stack"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script src="/assets/app.js"></script>
+</body>
+</html>

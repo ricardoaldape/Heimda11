@@ -1,0 +1,6 @@
+.env
+data/
+*.log
+bin/
+dist/
+coverage.out

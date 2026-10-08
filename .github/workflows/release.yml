@@ -1,0 +1,68 @@
+name: Heimda11 Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag (for manual run)"
+        required: true
+        default: "v0.1.0"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: [self-hosted, heimda11]
+    timeout-minutes: 20
+    env:
+      HEIMDA11_GO: C:\Tools\Go-1.23.12\bin\go.exe
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify local Go toolchain
+        shell: powershell
+        run: |
+          & $env:HEIMDA11_GO version
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Test
+        shell: powershell
+        run: |
+          & $env:HEIMDA11_GO test ./...
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Build cross-platform binaries
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+
+          $env:GOOS = "linux"
+          $env:GOARCH = "amd64"
+          $env:CGO_ENABLED = "0"
+          & $env:HEIMDA11_GO build -trimpath -ldflags="-s -w" -o dist/heimda11-linux-amd64 ./cmd/heimda11
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+          $env:GOOS = "linux"
+          $env:GOARCH = "arm64"
+          $env:CGO_ENABLED = "0"
+          & $env:HEIMDA11_GO build -trimpath -ldflags="-s -w" -o dist/heimda11-linux-arm64 ./cmd/heimda11
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+          $env:GOOS = "windows"
+          $env:GOARCH = "amd64"
+          $env:CGO_ENABLED = "0"
+          & $env:HEIMDA11_GO build -trimpath -ldflags="-s -w" -o dist/heimda11-windows-amd64.exe ./cmd/heimda11
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+          $hashes = Get-ChildItem dist -File | Get-FileHash -Algorithm SHA256
+          $hashes | ForEach-Object { "$($_.Hash.ToLower())  $(Split-Path $_.Path -Leaf)" } | Set-Content dist/SHA256SUMS.txt
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
+          files: dist/*
+          generate_release_notes: true
